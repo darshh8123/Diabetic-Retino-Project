@@ -13,8 +13,7 @@ from fpdf import FPDF
 import gdown
 from datetime import datetime
 
-
-# Auto-download model
+# ────────────────────────────── Auto-download model ──────────────────────────────
 model_path = "best_model.pth"
 drive_file_id = "1hrRdV8601M6Khk95n0lw-0H9oNEPDV6g"
 model_url = f"https://drive.google.com/uc?id={drive_file_id}"
@@ -23,8 +22,7 @@ if not os.path.exists(model_path):
     st.info("Downloading model from Google Drive...")
     gdown.download(model_url, model_path, quiet=False)
 
-
-# Load model
+# ────────────────────────────── Load Model ──────────────────────────────
 @st.cache_resource
 def load_model():
     model = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1)
@@ -39,11 +37,9 @@ def load_model():
     model.eval()
     return model
 
-
 model = load_model()
 
-
-# Grad-CAM implementation
+# ────────────────────────────── Grad-CAM ──────────────────────────────
 class GradCAM:
     def __init__(self, model, target_layer):
         self.model = model
@@ -74,8 +70,7 @@ class GradCAM:
         cam /= (cam.max() + 1e-8)
         return cam.cpu().numpy()
 
-
-# Image preprocessing
+# ────────────────────────────── Image Utilities ──────────────────────────────
 def apply_colormap_on_image(org_img, activation_map, colormap_name=cv2.COLORMAP_JET):
     cam_resized = cv2.resize(activation_map, org_img.size, interpolation=cv2.INTER_CUBIC)
     cam_resized = (cam_resized - np.min(cam_resized)) / (np.max(cam_resized) - np.min(cam_resized) + 1e-8)
@@ -84,7 +79,6 @@ def apply_colormap_on_image(org_img, activation_map, colormap_name=cv2.COLORMAP_
     overlay = np.array(org_img.convert("RGB")) * 0.7 + heatmap * 0.3
     overlay = np.clip(overlay, 0, 255).astype(np.uint8)
     return Image.fromarray(overlay), Image.fromarray(heatmap), cam_resized
-
 
 def draw_detected_regions_on_cam(org_img, cam_mask, threshold=0.6):
     mask = (cam_mask > threshold).astype(np.uint8) * 255
@@ -95,20 +89,18 @@ def draw_detected_regions_on_cam(org_img, cam_mask, threshold=0.6):
         cv2.rectangle(img_with_box, (x, y), (x + w, y + h), (0, 255, 0), 2)
     return Image.fromarray(img_with_box)
 
-
-# PDF Report
+# ────────────────────────────── PDF Report ──────────────────────────────
 def generate_pdf_report(name, age, date, prediction, probs, class_names, orig_img, region_img, overlay_img):
     pdf = FPDF()
     pdf.add_page()
-
     pdf.set_font("Arial", "B", 16)
     pdf.set_text_color(30, 30, 120)
-    pdf.cell(0, 10, "Diabetic Retinopathy Diagnostic Generated Report", ln=True, align="C")
+    pdf.cell(0, 10, "Diabetic Retinopathy Diagnostic Report", ln=True, align="C")
     pdf.ln(5)
 
     pdf.set_font("Arial", "B", 12)
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(190, 10, "Patient Information", border=1, ln=True, align="L")
+    pdf.cell(190, 10, "Patient Information", border=1, ln=True)
     pdf.set_font("Arial", "", 11)
     pdf.cell(190, 8, f"Name: {name}", border=1, ln=True)
     pdf.cell(190, 8, f"Age: {age}", border=1, ln=True)
@@ -116,14 +108,14 @@ def generate_pdf_report(name, age, date, prediction, probs, class_names, orig_im
     pdf.ln(4)
 
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(190, 10, "Prediction Result", border=1, ln=True, align="L")
+    pdf.cell(190, 10, "Prediction Result", border=1, ln=True)
     pdf.set_font("Arial", "", 11)
     pdf.cell(190, 8, f"Predicted Class: {prediction}", border=1, ln=True)
-    pdf.cell(190, 8, "Model Accuracy: 86.3%", border=1, ln=True)
+    pdf.cell(190, 8, "Reported Test Accuracy: 86.3%", border=1, ln=True)
     pdf.ln(4)
 
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(190, 10, "Class Probabilities", border=1, ln=True, align="L")
+    pdf.cell(190, 10, "Class Probabilities", border=1, ln=True)
     pdf.set_font("Arial", "", 11)
     for cls, p in zip(class_names, probs):
         pdf.cell(190, 8, f"{cls}: {p*100:.2f}%", border=1, ln=True)
@@ -134,7 +126,7 @@ def generate_pdf_report(name, age, date, prediction, probs, class_names, orig_im
     overlay_img.save("overlay.jpg")
 
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(190, 10, "Visual Analysis", border=1, ln=True, align="L")
+    pdf.cell(190, 10, "Visual Analysis", border=1, ln=True)
     y = pdf.get_y()
     pdf.set_font("Arial", "I", 10)
     pdf.cell(63, 6, "Original", border=1, ln=False, align="C")
@@ -150,13 +142,10 @@ def generate_pdf_report(name, age, date, prediction, probs, class_names, orig_im
 
     return io.BytesIO(pdf.output(dest="S").encode("latin1"))
 
-
-# Streamlit Setup
+# ────────────────────────────── Streamlit Setup ──────────────────────────────
 st.set_page_config(page_title="Diabetic Retinopathy Detector", layout="wide")
-st.markdown("<h1 style='text-align: center;'> Diabetic Retinopathy Detection</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Diabetic Retinopathy Detection</h1>", unsafe_allow_html=True)
 
-
-# Transforms & Class Info
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -165,8 +154,6 @@ transform = transforms.Compose([
 
 class_names = ['Healthy', 'Mild DR', 'Moderate DR', 'Proliferate DR', 'Severe DR']
 
-
-# SQLite DB
 conn = sqlite3.connect("retinopathy_predictions.db", check_same_thread=False)
 c = conn.cursor()
 c.execute('''
@@ -175,32 +162,32 @@ c.execute('''
         name TEXT,
         age INTEGER,
         prediction TEXT,
-        date TEXT
+        probs TEXT,
+        date TEXT,
+        image BLOB,
+        heatmap BLOB
     )
 ''')
 conn.commit()
 
-
-# Sidebar History
-st.sidebar.title("")
+# Sidebar Prediction History
+st.sidebar.title("Patient Input")
 st.sidebar.markdown("### Recent Predictions")
 history = c.execute("SELECT name, age, prediction, date FROM predictions ORDER BY id DESC LIMIT 5").fetchall()
 if history:
     for row in history:
-        st.sidebar.markdown(f"**{row[0]}, {row[1]}y** → *{row[2]}*  \n {row[3]}")
+        st.sidebar.markdown(f"**{row[0]}, {row[1]}y** → *{row[2]}*  \n🕓 {row[3]}")
 else:
     st.sidebar.write("No predictions saved yet.")
 
-
-# Input Form
+# Main Form
 with st.form("predict_form"):
     name = st.text_input("Name")
     age = st.number_input("Age", min_value=1, max_value=120, step=1)
     upload = st.file_uploader("Upload Retinal Image", type=["jpg", "jpeg", "png"])
     submit = st.form_submit_button("Run Prediction")
 
-
-# Inference + Report
+# Prediction & PDF Report
 if submit:
     if not name or not upload:
         st.warning("Please enter name and upload an image.")
@@ -222,7 +209,6 @@ if submit:
         region_highlight_img = draw_detected_regions_on_cam(image, cam_mask)
 
         st.subheader(f"Prediction: *{prediction}* ({probs[top_idx]*100:.1f}%)")
-
         st.markdown("#### Class-wise Probabilities:")
         for i, p in enumerate(probs):
             st.write(f"{class_names[i]}: {p*100:.2f}%")
@@ -234,12 +220,25 @@ if submit:
         col3.image(overlay_img, caption=f"Overlay ({prediction})", width=300)
 
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        pdf_buf = generate_pdf_report(name, age, now, prediction, probs, class_names, image, region_highlight_img, overlay_img)
+        img_buf = io.BytesIO(); image.save(img_buf, format="PNG")
+        hm_buf = io.BytesIO(); overlay_img.save(hm_buf, format="PNG")
 
-        st.download_button(" Download PDF Report", data=pdf_buf.getvalue(), file_name=f"{name}_DR_Report.pdf", mime="application/pdf")
-
-        c.execute("INSERT INTO predictions (name, age, prediction, date) VALUES (?, ?, ?, ?)", (name, age, prediction, now))
+        c.execute("""
+            INSERT INTO predictions (name, age, prediction, probs, date, image, heatmap)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            name,
+            age,
+            prediction,
+            ",".join(f"{v:.4f}" for v in probs),
+            now,
+            img_buf.getvalue(),
+            hm_buf.getvalue()
+        ))
         conn.commit()
+
+        pdf_buf = generate_pdf_report(name, age, now, prediction, probs, class_names, image, region_highlight_img, overlay_img)
+        st.download_button(" Download PDF Report", data=pdf_buf.getvalue(), file_name=f"{name}_DR_Report.pdf", mime="application/pdf")
 
 
 
