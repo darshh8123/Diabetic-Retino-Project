@@ -1,8 +1,8 @@
 streamlit
 torch
 torchvision
-Pillow
-opencv-python
-fpdf
 numpy
+pillow
+opencv-python
 gdown
+fpdf
