@@ -1,5 +1,8 @@
-import os
 import streamlit as st
+
+st.set_page_config(page_title="Diabetic Retinopathy Detector", layout="wide")
+
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
