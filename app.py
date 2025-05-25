@@ -1,7 +1,9 @@
 import streamlit as st
 
+# Set page configuration first
 st.set_page_config(page_title="Diabetic Retinopathy Detector", layout="wide")
 
+# Other imports
 import os
 import torch
 import torch.nn as nn
@@ -145,8 +147,7 @@ def generate_pdf_report(name, age, date, prediction, probs, class_names, orig_im
 
     return io.BytesIO(pdf.output(dest="S").encode("latin1"))
 
-# ────────────────────────────── Streamlit Setup ──────────────────────────────
-st.set_page_config(page_title="Diabetic Retinopathy Detector", layout="wide")
+# ────────────────────────────── Streamlit Interface ──────────────────────────────
 st.markdown("<h1 style='text-align: center;'>Diabetic Retinopathy Detection</h1>", unsafe_allow_html=True)
 
 transform = transforms.Compose([
@@ -173,7 +174,7 @@ c.execute('''
 ''')
 conn.commit()
 
-# Sidebar Prediction History
+# Sidebar
 st.sidebar.title("Patient Input")
 st.sidebar.markdown("### Recent Predictions")
 history = c.execute("SELECT name, age, prediction, date FROM predictions ORDER BY id DESC LIMIT 5").fetchall()
@@ -190,7 +191,7 @@ with st.form("predict_form"):
     upload = st.file_uploader("Upload Retinal Image", type=["jpg", "jpeg", "png"])
     submit = st.form_submit_button("Run Prediction")
 
-# Prediction & PDF Report
+# Prediction Logic
 if submit:
     if not name or not upload:
         st.warning("Please enter name and upload an image.")
@@ -242,17 +243,3 @@ if submit:
 
         pdf_buf = generate_pdf_report(name, age, now, prediction, probs, class_names, image, region_highlight_img, overlay_img)
         st.download_button(" Download PDF Report", data=pdf_buf.getvalue(), file_name=f"{name}_DR_Report.pdf", mime="application/pdf")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
